@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #0F1613;
+  color: #EDF2EF;
+  font-family: 'Inter', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+}
+
+.mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.card {
+  background-color: #161F1B;
+  border: 1px solid #283530;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.btn-primary {
+  background-color: #E8B33D;
+  color: #0F1613;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: #f0c360;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  border: 1px solid #283530;
+  color: #EDF2EF;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  border-color: #E8B33D;
+  color: #E8B33D;
+}
+
+.input-field {
+  background-color: #0F1613;
+  border: 1px solid #283530;
+  border-radius: 8px;
+  color: #EDF2EF;
+  padding: 12px 16px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #E8B33D;
+}
+
+.status-connected {
+  color: #6B9080;
+}
+
+.status-disconnected {
+  color: #8B9992;
+}
+
+.status-pending {
+  color: #E8B33D;
+}
+
+.accent-text {
+  color: #E8B33D;
+}
+
+.text-secondary {
+  color: #8B9992;
+}
