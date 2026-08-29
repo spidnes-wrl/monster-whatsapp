@@ -1,214 +1,218 @@
-# 📖 Guide d'Installation Monster
+# Installation complète — Monster WhatsApp
 
-## 🚀 Démarrage rapide
+## 🚀 Démarrage local
 
 ### Prérequis
-- Node.js 18+ et npm/yarn
-- Un compte Supabase (gratuit)
-- Un compte Vercel (gratuit)
-- Un compte WhatsApp Business (pour les webhooks)
+- Node.js 18+ 
+- npm ou yarn
+- Compte Supabase
+- Compte Vercel (pour le déploiement)
 
----
+### Étape 1 : Cloner le repo
 
-## 1️⃣ Installation locale
-
-### Cloner le repo
 ```bash
 git clone https://github.com/spidnes-wrl/monster-whatsapp.git
 cd monster-whatsapp
 npm install
 ```
 
-### Configuration Supabase
+### Étape 2 : Configuration Supabase
 
-#### Créer les tables
-1. Accédez à votre dashboard Supabase
-2. Allez dans **SQL Editor** → **New Query**
-3. Collez ce SQL :
+#### Créer la base de données
+
+1. Allez sur [supabase.com](https://supabase.com)
+2. Créez un nouveau projet
+3. Allez dans **SQL Editor** et exécutez ce script :
 
 ```sql
--- Table users
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+-- Créer la table users
+CREATE TABLE public.users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   phone TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
-  username TEXT UNIQUE NOT NULL,
+  username TEXT NOT NULL,
   bio TEXT,
   horaires TEXT,
   contact TEXT,
   connection_status TEXT DEFAULT 'disconnected',
   qr_code TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
 );
 
--- Table products
-CREATE TABLE products (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+-- Créer la table products
+CREATE TABLE public.products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
   price TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMP DEFAULT now()
 );
 
--- Indexs pour performance
-CREATE INDEX idx_users_phone ON users(phone);
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_products_user_id ON products(user_id);
+-- Indexes
+CREATE INDEX idx_products_user_id ON public.products(user_id);
+CREATE INDEX idx_users_phone ON public.users(phone);
+
+-- Enable RLS
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+
+-- Policies (permettre l'accès public pour la démo)
+CREATE POLICY "users_select" ON public.users FOR SELECT USING (true);
+CREATE POLICY "users_insert" ON public.users FOR INSERT WITH CHECK (true);
+CREATE POLICY "users_update" ON public.users FOR UPDATE USING (true);
+CREATE POLICY "products_select" ON public.products FOR SELECT USING (true);
+CREATE POLICY "products_insert" ON public.products FOR INSERT WITH CHECK (true);
+CREATE POLICY "products_delete" ON public.products FOR DELETE USING (true);
 ```
 
-#### Configurer Realtime
-1. Dans **Settings** → **Database** → **Realtime**
-2. Activez les réplications pour les tables `users` et `products`
+#### Récupérer les clés API
 
-#### Clés API
-1. Allez dans **Settings** → **API**
+1. Allez dans **Settings → API**
 2. Copiez :
-   - `Project URL`
-   - `anon public key`
+   - **Project URL** → `NEXT_PUBLIC_SUPABASE_URL`
+   - **anon public** → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - **service_role secret** → `SUPABASE_SERVICE_ROLE_KEY`
 
-### Variables d'environnement
+### Étape 3 : Configuration locale
 
-Créez un fichier `.env.local` à la racine :
+Créez un fichier `.env.local` :
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=votre_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=votre_anon_key
-SUPABASE_SERVICE_ROLE_KEY=votre_service_role_key
-WHATSAPP_BUSINESS_ACCOUNT_ID=votre_account_id
-WHATSAPP_BUSINESS_PHONE_NUMBER_ID=votre_phone_id
-WHATSAPP_BUSINESS_ACCESS_TOKEN=votre_access_token
-WHATSAPP_WEBHOOK_VERIFY_TOKEN=generate_random_token
+NEXT_PUBLIC_SUPABASE_URL=your_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+WHATSAPP_BUSINESS_ACCOUNT_ID=your_account_id
+WHATSAPP_BUSINESS_PHONE_NUMBER_ID=your_phone_id
+WHATSAPP_BUSINESS_ACCESS_TOKEN=your_access_token
+WHATSAPP_WEBHOOK_VERIFY_TOKEN=your_verify_token
+
 NEXT_PUBLIC_DOMAIN=http://localhost:3000
 ```
 
-### Lancer le dev server
+### Étape 4 : Lancer le serveur local
+
 ```bash
 npm run dev
 ```
 
-Visitez `http://localhost:3000` 🎉
+Visitez `http://localhost:3000` 🚀
 
 ---
 
-## 2️⃣ Configuration WhatsApp Business
+## 🌍 Déploiement sur Vercel
 
-### Obtenir les credentials
+### Option A : Déploiement rapide (recommandé)
 
-1. **Créer un app WhatsApp Business**
-   - Allez sur [developers.facebook.com](https://developers.facebook.com)
-   - Créez une nouvelle app → **Business**
-   - Ajoutez le produit **WhatsApp**
-
-2. **Récupérer les clés**
-   - `Account ID` : Dans Settings → Business accounts
-   - `Phone Number ID` : Dans WhatsApp → Phone numbers
-   - `Access Token` : Générez depuis **System User Access Tokens**
-
-3. **Configurer le Webhook**
-   - URL de callback : `https://votre-domaine.com/api/webhooks/whatsapp`
-   - Verify Token : Générez un token aléatoire (min 20 caractères)
-   - Événements à souscrire : `messages`, `message_status`
-
----
-
-## 3️⃣ Déploiement sur Vercel
-
-### Option A : Via GitHub (recommandé)
-```bash
-# Push sur GitHub (déjà fait)
-git push origin main
-```
-
-1. Allez sur [vercel.com](https://vercel.com)
-2. Connectez votre compte GitHub
-3. Importez le repo `monster-whatsapp`
-4. **Dans les variables d'environnement** :
-   - Ajoutez toutes les clés `.env.local`
-5. Cliquez **Deploy** 🚀
-
-### Option B : CLI Vercel
 ```bash
 npm i -g vercel
-vercel login
 vercel
 ```
 
----
+Suivez les instructions du CLI.
 
-## 4️⃣ Configuration du domaine
+### Option B : Connexion GitHub
 
-### Avec un domaine personnalisé
+1. Allez sur [vercel.com](https://vercel.com)
+2. Cliquez **New Project**
+3. Sélectionnez votre repo GitHub
+4. Cliquez **Import**
 
-#### Sur Vercel
-1. Allez dans **Project Settings** → **Domains**
-2. Ajoutez votre domaine (ex: `monster.com`)
-3. Suivez les instructions DNS
+### Configuration des variables d'environnement
 
-#### Chez votre registraire (GoDaddy, Namecheap, etc.)
-Ajoutez ces enregistrements DNS :
+Dans **Vercel Dashboard → Project Settings → Environment Variables** :
 
 ```
-Type: CNAME
-Name: www
-Value: cname.vercel-dns.com
+NEXT_PUBLIC_SUPABASE_URL=your_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-Type: A
-Name: @
-Value: 76.76.19.132
+WHATSAPP_BUSINESS_ACCOUNT_ID=your_account_id
+WHATSAPP_BUSINESS_PHONE_NUMBER_ID=your_phone_id
+WHATSAPP_BUSINESS_ACCESS_TOKEN=your_access_token
+WHATSAPP_WEBHOOK_VERIFY_TOKEN=your_verify_token
+
+NEXT_PUBLIC_DOMAIN=https://your-domain.vercel.app
 ```
 
-**Attendre 24-48h** pour la propagation DNS ⏳
+### Déploiement automatique
 
-### Sans domaine personnalisé
-Votre site sera accessible à : `monster-whatsapp.vercel.app`
-
----
-
-## 5️⃣ Tests & Validation
-
-### Tester l'inscription
-1. Visitez la page d'accueil
-2. Entrez un numéro WhatsApp (format: +33612345678)
-3. Remplissez le formulaire
-4. Cliquez **Créer mon assistant**
-
-### Tester la génération QR
-1. Depuis le dashboard, cliquez **Générer le QR code**
-2. Scannez depuis WhatsApp → Appareils connectés
-3. Le statut devrait passer à **connecté** ✅
-
-### Tester les produits
-1. Ajoutez des produits dans le dashboard
-2. Ils doivent s'afficher en temps réel (grâce à Realtime Supabase)
+Chaque **push sur `main`** déclenche un déploiement automatique ✅
 
 ---
 
-## 6️⃣ Troubleshooting
+## 🔑 Configuration WhatsApp Business
 
-### "Failed to connect to Supabase"
-- Vérifiez les variables d'environnement
-- Vérifiez que la base est bien initialisée
-- Vérifiez les CORS settings dans Supabase
+### Créer une app WhatsApp
 
-### "Webhook not working"
-- Vérifiez que Vercel est bien déployé (HTTPS)
-- Testez via Postman : `POST /api/webhooks/whatsapp`
-- Vérifiez le token de vérification
+1. Allez sur [developers.facebook.com](https://developers.facebook.com)
+2. Créez une nouvelle app
+3. Allez dans **WhatsApp → Getting Started**
+4. Sélectionnez **API Access**
 
-### "QR code ne s'affiche pas"
-- Vérifiez que le champ `qr_code` est bien rempli en base
-- Actualisez la page (ou attendez le Realtime)
+### Récupérer les credentials
+
+- **Account ID** : Visible dans WhatsApp → Settings
+- **Phone Number ID** : WhatsApp → Phone Numbers
+- **Access Token** : Générer un token temporaire et créer un token long terme
+
+### Configurer le webhook
+
+1. Allez dans **Webhooks**
+2. Mettez à jour l'URL callback :
+   ```
+   https://monster.wrl/api/webhooks/whatsapp
+   ```
+3. Ajoutez le **Verify Token** (min 20 caractères)
+4. Sélectionnez les événements :
+   - `messages`
+   - `message_status`
 
 ---
 
-## 📚 Ressources utiles
+## 📋 Checklist d'installation
 
-- [Documentation Supabase](https://supabase.com/docs)
-- [Documentation Next.js](https://nextjs.org/docs)
-- [Documentation WhatsApp Business API](https://developers.facebook.com/docs/whatsapp)
-- [Vercel Docs](https://vercel.com/docs)
+- [ ] Repo cloné
+- [ ] Node.js 18+ installé
+- [ ] Base Supabase créée et SQL exécuté
+- [ ] `.env.local` rempli avec les clés
+- [ ] `npm run dev` fonctionne
+- [ ] Site accessible sur `http://localhost:3000`
+- [ ] Vercel configuré pour déploiement automatique
+- [ ] Variables d'environnement ajoutées dans Vercel
+- [ ] WhatsApp Business app créée
+- [ ] Webhook WhatsApp configuré
 
 ---
 
-**Questions ?** Créez une issue sur le repo ! 🎯
+## 🐛 Problèmes courants
+
+### "Cannot find module @supabase/supabase-js"
+```bash
+npm install @supabase/supabase-js
+```
+
+### "Supabase connection failed"
+- Vérifiez que `NEXT_PUBLIC_SUPABASE_URL` est correct
+- Vérifiez que `NEXT_PUBLIC_SUPABASE_ANON_KEY` est correct
+- Testez la connexion dans la console : `console.log(supabase)`
+
+### "RLS policy error"
+- Vérifiez que les policies Supabase sont activées
+- Exécutez le script SQL complet
+
+### "Vercel deployment failed"
+- Vérifiez les logs : `vercel logs`
+- Vérifiez que toutes les variables d'environnement sont définis
+- Vérifiez que `NEXT_PUBLIC_DOMAIN` pointe vers le bon domaine
+
+---
+
+## 📞 Support
+
+- Docs Supabase : https://supabase.com/docs
+- Docs Vercel : https://vercel.com/docs
+- Docs WhatsApp : https://developers.facebook.com/docs/whatsapp
+
